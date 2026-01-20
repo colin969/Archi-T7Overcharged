@@ -4,6 +4,18 @@
 
 This is a custom fork of T7Overcharged to include [apclientpp](https://github.com/black-sliver/apclientpp) inside Call of Duty Black Ops 3. This is to enable the Black Ops 3 Zombies AP Mod. In addition it also removes components of T7Overcharged that are not used in AP.
 
+Current Target: AP 0.6.5
+
+# Build Instructions (Windows x64)
+
+- Prerequisities: Visual Studio, v143 build tools, ATL for v143 component, vcpkg
+
+1. Clone repository
+2. Run `./generate.bat` to generate a solution inside `build`
+3. Run `vcpkg install` to set up openssl and zlib requirements
+4. Open solution in Visual Studio (do not upgrade build targets)
+5. Build the solution, enjoy your Archi-T7Overcharged.dll
+
 ## License 
 As with T7Overcharged, this is liscenced under GLP3 (linked above). 
 

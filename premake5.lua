@@ -283,7 +283,7 @@ project "client"
 kind "SharedLib"
 language "C++"
 
-targetname "T7Overcharged"
+targetname "Archi-T7Overcharged"
 
 pchheader "std_include.hpp"
 pchsource "src/client/std_include.cpp"

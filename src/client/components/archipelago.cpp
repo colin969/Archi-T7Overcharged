@@ -3,12 +3,9 @@
 #include "havok/hks_api.hpp"
 #include "havok/lua_api.hpp"
 
-#define ASIO_STANDALONE
-#define WSWRAP_NO_SSL
-
 #define UUID_FILE "uuid"
 
-#define VERSION_TUPLE {0,4,3}
+#define VERSION_TUPLE {0,6,5}
 
 #include <apclient.hpp>
 #include <apuuid.hpp>

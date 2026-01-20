@@ -14,9 +14,6 @@
 [submodule "deps/minhook"]
 	path = deps/minhook
 	url = https://github.com/TsudaKageyu/minhook.git
-[submodule "deps/discord-rpc"]
-	path = deps/discord-rpc
-	url = https://github.com/discord/discord-rpc.git
 [submodule "deps/wswrap"]
 	path = deps/wswrap
 	url = https://github.com/black-sliver/wswrap.git
