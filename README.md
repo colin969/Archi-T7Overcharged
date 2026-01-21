@@ -1,5 +1,11 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
+## Useful Links
+
+- AP World: https://github.com/colin969/Call-of-Duty-BO3-Zombies-Archipelago
+- BO3 Mod: https://github.com/colin969/bo3_archipelago
+- BO3 APClient DLL: https://github.com/colin969/Archi-T7Overcharged
+
 # Archi-T7 Overcharged
 
 This is a custom fork of T7Overcharged to include [apclientpp](https://github.com/black-sliver/apclientpp) inside Call of Duty Black Ops 3. This is to enable the Black Ops 3 Zombies AP Mod. In addition it also removes components of T7Overcharged that are not used in AP.
