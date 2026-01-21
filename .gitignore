@@ -151,3 +151,4 @@ user*.bat
 #premake5.exe
 
 vcpkg_installed
+.vscode
