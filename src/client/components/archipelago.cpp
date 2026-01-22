@@ -272,21 +272,6 @@ namespace archipelago
 
 	}
 
-	int64_t getIdFromString(std::string name)
-	{
-		int result;
-		try
-		{
-			result = loc_name_to_id.at(name);
-		}
-		catch (std::out_of_range e)
-		{
-			//Not a valid item recieved
-			return archipelago::loc_error;
-		}
-		return (int64_t)(result+baseID);
-	}
-
 	//Lua State Functions 
 
 	int connect(lua::lua_State* s)
@@ -339,6 +324,13 @@ namespace archipelago
 		return 1;
 	}
 
+	int say(lua::lua_State *s)
+	{
+		const std::string message = lua::lua_tostring(s, 1);
+		ap->Say(message);
+		return 1;
+	}
+
 	int checkLocation(lua::lua_State* s)
 	{
 		lua::HksNumber loc = lua::lua_tonumber(s, 1);
@@ -365,6 +357,7 @@ namespace archipelago
 				{"Disconnect",disconnect},
 				{"Poll",poll},
 				{"CheckLocation",checkLocation},
+				{"Say",say},
 				{nullptr, nullptr},
 			};
 			hks::hksI_openlib(game::UI_luaVM, "Archipelago", ArchipelagoLibrary, 0, 1);
