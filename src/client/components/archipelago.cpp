@@ -45,6 +45,20 @@ namespace archipelago
 	std::string slot = "";
 	std::string seed = "";
 
+	struct DvarSetting {
+		std::string jsonName;
+		std::string dvarName;
+		enum class Type { String, Int, Bool } type;
+	};
+
+	struct DvarSetting slot_settings[] = {
+		{"map_specific_wallbuys", "ARCHIPELAGO_MAP_SPECIFIC_WALLBUYS", DvarSetting::Type::Bool},
+		{"map_specific_machines", "ARCHIPELAGO_MAP_SPECIFIC_MACHINES", DvarSetting::Type::Bool},
+		{"special_rounds_enabled", "ARCHIPELAGO_SPECIAL_ROUNDS_ENABLED", DvarSetting::Type::Bool},
+		{"perk_limit_default_modifier", "ARCHIPELAGO_PERK_LIMIT_DEFAULT_MODIFIER", DvarSetting::Type::Int},
+		{"randomized_shield_parts", "ARCHIPELAGO_RANDOMIZED_SHIELD_PARTS", DvarSetting::Type::Bool},
+	};
+
 	std::list<int64_t> checkedLocationsList = { };
 
 	static std::unordered_map<std::string, std::string> settings{
@@ -70,6 +84,12 @@ namespace archipelago
 	void APSetDvar(std::string var, std::string val)
 	{
 		std::string luaThreadCode = "Engine.SetDvar( \""+var+"\", \"" + val + "\" )";
+		hks::execute_raw_lua(luaThreadCode, "APSetDvarThread");
+	}
+
+	void APSetDvarInt(std::string var, int val)
+	{
+		std::string luaThreadCode = "Engine.SetDvar( \"" + var + "\", " + std::to_string(val) + " )";
 		hks::execute_raw_lua(luaThreadCode, "APSetDvarThread");
 	}
 
@@ -199,7 +219,41 @@ namespace archipelago
 			data.at("seed").get_to(archipelago::seed);
 			data.at("slot").get_to(archipelago::slot);
 
-			/* TODO: Pull settings once i add some
+			// Map slot setting data values to dvars
+			for (const auto& mapping : slot_settings)
+			{
+				if (data.contains(mapping.jsonName))
+				{
+					switch (mapping.type)
+					{
+						case DvarSetting::Type::String:
+						{
+							std::string val;
+							data.at(mapping.jsonName).get_to(val);
+							APSetDvar(mapping.dvarName, val);
+							break;
+						}
+						case DvarSetting::Type::Int:
+						{
+							APSetDvarInt(mapping.dvarName, (int) data[mapping.jsonName]);
+							break;
+						}
+						case DvarSetting::Type::Bool:
+						{
+							bool val = data[mapping.jsonName] == true;
+							if (val) {
+								APSetDvarInt(mapping.dvarName, 1);
+							} else {
+								APSetDvarInt(mapping.dvarName, 0);
+							}
+							break;
+						}
+					}
+				}
+			}
+
+			APSetDvar("ARCHIPELAGO_SETTINGS_READY", "TRUE");
+
 			for (auto& [jsonName, dVar] : settings)
 			{
 				if (data.contains(jsonName))
@@ -208,7 +262,7 @@ namespace archipelago
 					data.at(jsonName).get_to(val);
 					APSetDvar(dVar, val);
 				}
-			}*/
+			}
 
 			});
 		ap->set_slot_disconnected_handler([]() {
