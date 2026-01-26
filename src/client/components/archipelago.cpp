@@ -18,8 +18,6 @@ using nlohmann::json;
 
 namespace archipelago
 {
-
-	
 	const std::string GAME_NAME = "Black Ops 3 - Zombies";
 	
 	//Full Remote Items
@@ -38,6 +36,8 @@ namespace archipelago
 
 	bool awaitingReconnect = false;
 
+	bool first_item_call = true;
+
 	int baseID = 0;
 
 	int lastItem = 0;
@@ -50,6 +50,10 @@ namespace archipelago
 	static std::unordered_map<std::string, std::string> settings{
 		{"the_giant_enabled","AP_THE_GIANT_ENABLED"}
 	};
+
+	std::string get_save_path(const std::string& seed);
+	void save_slot_data(const std::string& seed, const std::string& data);
+	std::string load_slot_data(const std::string& seed);
 
 	//Utility Functions
 	void APLogPrint(std::string message)
@@ -156,6 +160,7 @@ namespace archipelago
 	void connect_ap(std::string uri = "",std::string slot="",std::string uuidFile = ".\\mods\\bo3_archipelago\\zone\\uuid", std::string password = "")
 	{
 		std::string uuid = ap_get_uuid(UUID_FILE);
+		first_item_call = true;
 
 		if (ap) delete ap;
 		ap = nullptr;
@@ -219,7 +224,6 @@ namespace archipelago
 			}
 			});
 		ap->set_items_received_handler([](const std::list<APClient::NetworkItem>& items) {
-
 			if (!ap->is_data_package_valid()) {
 				// NOTE: this should not happen since we ask for data package before connecting
 				if (!ap_sync_queued) ap->Sync();
@@ -228,34 +232,30 @@ namespace archipelago
 			}
 
 			std::list<APClient::NetworkItem> valid_items = std::list<APClient::NetworkItem>(items);
-			
-			/* TODO: Get this to actually work
-			* 
-			* //If we are awaiting the big reconnect dump of items, skip to after the last item we know about
-			if (archipelago::awaitingReconnect)
-			{
-				if (items.size() > archipelago::lastItem)
-				{
-					auto lastIter = valid_items.begin();
-					std::advance(lastIter, archipelago::lastItem);
-					valid_items.erase(valid_items.begin(), lastIter);
-				}
 
-				archipelago::awaitingReconnect = false;
-			}*/
-			
+			// TODO: Remove filler items so they don't trigger everytime we load in
 
 			for (const auto& item : valid_items) {
 				archipelago::lastItem += 1;
 
 				std::string itemname = ap->get_item_name(item.item);
+
+				// Ignore gift and trap items on reconnect
+				if (first_item_call) {
+					if (itemname == "50 Points" ||
+						itemname.find("Gift -") != std::string::npos || 
+						itemname.find("Trap -") != std::string::npos) {
+						continue;
+					}
+				}
 				std::string sender = ap->get_player_alias(item.player);
 				std::string location = ap->get_location_name(item.location);
 
 				std::string luaThreadCode = "Archi.ItemGetEvent(\""+itemname+"\");";
 				hks::execute_raw_lua(luaThreadCode, "ItemGetThread");
 			}
-			});
+			first_item_call = false;
+		});
 
 		ap->set_data_package_changed_handler([](const json& data) {
 			});
@@ -290,7 +290,6 @@ namespace archipelago
 
 	int checkConnection(lua::lua_State* s)
 	{
-
 		std::string url = lua::lua_tostring(s, 1);
 		std::string slot = lua::lua_tostring(s, 2);
 		std::string uuidPath = lua::lua_tostring(s, 3);
@@ -300,8 +299,26 @@ namespace archipelago
 
 		check_connection_ap(url, slot, uuidPath + UUID_FILE, password);
 
-		
+		return 1;
+	}
 
+	int storeSaveData(lua::lua_State* s)
+	{
+		std::string data = lua::lua_tostring(s, 1);
+		save_slot_data(archipelago::seed, data);
+		return 1;
+	}
+
+	int loadSaveData(lua::lua_State* s)
+	{
+		std::string data = load_slot_data(archipelago::seed);
+		lua::lua_pushstring(s, data.c_str());
+		return 1;
+	}
+
+	int getSeed(lua::lua_State* s)
+	{
+		lua::lua_pushstring(s, archipelago::seed.c_str());
 		return 1;
 	}
 
@@ -358,11 +375,58 @@ namespace archipelago
 				{"Poll",poll},
 				{"CheckLocation",checkLocation},
 				{"Say",say},
+				{"StoreSaveData",storeSaveData},
+				{"LoadSaveData",loadSaveData},
+				{"GetSeed",getSeed},
 				{nullptr, nullptr},
 			};
 			hks::hksI_openlib(game::UI_luaVM, "Archipelago", ArchipelagoLibrary, 0, 1);
 		}
 	};
+
+	std::string get_save_path(const std::string& seed)
+	{
+		std::filesystem::path save_dir = ".\\mods\\bo3_archipelago\\saves";
+		std::filesystem::create_directories(save_dir);
+		return (save_dir / (seed + ".json")).string();
+	}
+
+	void save_slot_data(const std::string& seed, const std::string& data)
+	{
+		try {
+			std::string save_path = get_save_path(seed);
+			std::ofstream file(save_path);
+			if (file.is_open()) {
+				file << data;
+				file.close();
+				APDebugLogPrint("Saved slot data for seed: " + seed);
+			}
+		}
+		catch (const std::exception& e) {
+			APLogPrint("Error saving slot data: " + std::string(e.what()));
+		}
+	}
+
+	std::string load_slot_data(const std::string& seed)
+	{
+		try {
+			std::string save_path = get_save_path(seed);
+			if (std::filesystem::exists(save_path)) {
+				std::ifstream file(save_path);
+				if (file.is_open()) {
+					std::stringstream buffer;
+					buffer << file.rdbuf();
+					file.close();
+					APDebugLogPrint("Loaded slot data for seed: " + seed);
+					return buffer.str();
+				}
+			}
+		}
+		catch (const std::exception& e) {
+			APLogPrint("Error loading slot data: " + std::string(e.what()));
+		}
+		return ""; // Return empty string if load fails
+	}
 }
 
 REGISTER_COMPONENT(archipelago::component)
