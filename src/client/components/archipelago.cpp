@@ -440,7 +440,7 @@ namespace archipelago
 
 	std::string get_save_path(const std::string& seed)
 	{
-		std::filesystem::path save_dir = ".\\mods\\bo3_archipelago\\saves";
+		std::filesystem::path save_dir = ".\\archipelago_saves";
 		std::filesystem::create_directories(save_dir);
 		return (save_dir / (seed + ".json")).string();
 	}
