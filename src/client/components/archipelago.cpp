@@ -123,7 +123,14 @@ namespace archipelago
 
 		temp_ap->set_socket_error_handler([](const std::string& error) {
 				//On Error don't try and reconnect
-				std::string luaThreadCode = "UpdateConnectionStatus(\"Error\")";
+				std::string escaped_error = error;
+				size_t pos = 0;
+				while ((pos = escaped_error.find('"', pos)) != std::string::npos) {
+					escaped_error.replace(pos, 1, "'");
+					pos += 1;
+				}
+
+				std::string luaThreadCode = "UpdateConnectionStatus(\"Error " + escaped_error + "\")";
 				hks::execute_raw_lua(luaThreadCode, "SetConnectionValidatedThread");
 			});
 
