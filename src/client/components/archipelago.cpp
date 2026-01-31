@@ -187,7 +187,6 @@ namespace archipelago
 	void connect_ap(std::string uri = "",std::string slot="",std::string uuidFile = ".\\mods\\bo3_archipelago\\zone\\uuid", std::string password = "")
 	{
 		std::string uuid = ap_get_uuid(UUID_FILE);
-		first_item_call = true;
 
 		if (ap) delete ap;
 		ap = nullptr;
@@ -202,6 +201,8 @@ namespace archipelago
 			});
 		ap->set_socket_disconnected_handler([]() {
 			socket_connected = false;
+			std::string luaThreadCode = "Archi.SocketDisconnected();";
+			hks::execute_raw_lua(luaThreadCode, "APSocketDisconnectedThread");
 			archipelago::awaitingReconnect = true;
 			APLogPrint("Socket disconnected");
 			});
@@ -260,6 +261,7 @@ namespace archipelago
 			}
 
 			APSetDvar("ARCHIPELAGO_SETTINGS_READY", "TRUE");
+			APSetDvar("ARCHIPELAGO_SEED", archipelago::seed);
 
 			for (auto& [jsonName, dVar] : settings)
 			{
@@ -301,21 +303,12 @@ namespace archipelago
 
 				std::string itemname = ap->get_item_name(item.item);
 
-				// Ignore gift and trap items on reconnect
-				if (first_item_call) {
-					if (itemname == "50 Points" ||
-						itemname.find("Gift -") != std::string::npos || 
-						itemname.find("Trap -") != std::string::npos) {
-						continue;
-					}
-				}
 				std::string sender = ap->get_player_alias(item.player);
 				std::string location = ap->get_location_name(item.location);
 
 				std::string luaThreadCode = "Archi.ItemGetEvent(\""+itemname+"\");";
 				hks::execute_raw_lua(luaThreadCode, "ItemGetThread");
 			}
-			first_item_call = false;
 		});
 
 		ap->set_data_package_changed_handler([](const json& data) {
