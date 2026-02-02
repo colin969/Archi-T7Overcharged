@@ -57,6 +57,9 @@ namespace archipelago
 		{"special_rounds_enabled", "ARCHIPELAGO_SPECIAL_ROUNDS_ENABLED", DvarSetting::Type::Bool},
 		{"perk_limit_default_modifier", "ARCHIPELAGO_PERK_LIMIT_DEFAULT_MODIFIER", DvarSetting::Type::Int},
 		{"randomized_shield_parts", "ARCHIPELAGO_RANDOMIZED_SHIELD_PARTS", DvarSetting::Type::Bool},
+		{"randomized_box_wonder_weapons", "ARCHIPELAGO_BOX_WONDER_WEAPON_ITEM_LOCK", DvarSetting::Type::Bool},
+		{"difficulty_gorod_egg_cooldown", "ARCHIPELAGO_DIFFICULTY_GOROD_EGG_COOLDOWN", DvarSetting::Type::Bool},
+		{"difficulty_gorod_dragon_wings", "ARCHIPELAGO_DIFFICULTY_GOROD_DRAGON_WINGS", DvarSetting::Type::Bool},
 	};
 
 	std::list<int64_t> checkedLocationsList = { };
@@ -260,8 +263,8 @@ namespace archipelago
 				}
 			}
 
-			APSetDvar("ARCHIPELAGO_SETTINGS_READY", "TRUE");
 			APSetDvar("ARCHIPELAGO_SEED", archipelago::seed);
+			APSetDvar("ARCHIPELAGO_SETTINGS_READY", "TRUE");
 
 			for (auto& [jsonName, dVar] : settings)
 			{
