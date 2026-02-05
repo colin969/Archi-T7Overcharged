@@ -289,6 +289,12 @@ namespace archipelago
 				for (const auto& error : errors) APLogPrint(error.c_str());
 			}
 			});
+		ap->set_location_checked_handler([](const std::list<int64_t>& locations) {
+			for (const auto& location : locations) {
+				std::string luaThreadCode = "Archi.LocationCheckedEvent("+ std::to_string(location - baseID) +");";
+				hks::execute_raw_lua(luaThreadCode, "LocationCheckedThread");
+			}
+		});
 		ap->set_items_received_handler([](const std::list<APClient::NetworkItem>& items) {
 			if (!ap->is_data_package_valid()) {
 				// NOTE: this should not happen since we ask for data package before connecting
