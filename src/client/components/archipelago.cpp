@@ -10,6 +10,7 @@
 #include <apclient.hpp>
 #include <apuuid.hpp>
 #include "console.hpp"
+#include "../game/game.hpp"
 
 //TMP
 #include <windows.h>
@@ -48,7 +49,7 @@ namespace archipelago
 	struct DvarSetting {
 		std::string jsonName;
 		std::string dvarName;
-		enum class Type { String, Int, Bool } type;
+		enum class Type { String, Int, Bool, StrArray } type;
 	};
 
 	struct DvarSetting slot_settings[] = {
@@ -60,13 +61,11 @@ namespace archipelago
 		{"randomized_box_wonder_weapons", "ARCHIPELAGO_BOX_WONDER_WEAPON_ITEM_LOCK", DvarSetting::Type::Bool},
 		{"difficulty_gorod_egg_cooldown", "ARCHIPELAGO_DIFFICULTY_GOROD_EGG_COOLDOWN", DvarSetting::Type::Bool},
 		{"difficulty_gorod_dragon_wings", "ARCHIPELAGO_DIFFICULTY_GOROD_DRAGON_WINGS", DvarSetting::Type::Bool},
+		{"goal_items", "ARCHIPELAGO_GOAL_ITEM_", DvarSetting::Type::StrArray},
+		{"goal_items_required", "ARCHIPELAGO_GOAL_ITEMS_REQUIRED", DvarSetting::Type::Int},
 	};
 
 	std::list<int64_t> checkedLocationsList = { };
-
-	static std::unordered_map<std::string, std::string> settings{
-		{"the_giant_enabled","AP_THE_GIANT_ENABLED"}
-	};
 
 	std::string get_save_path(const std::string& seed);
 	void save_slot_data(const std::string& seed, const std::string& data);
@@ -223,8 +222,6 @@ namespace archipelago
 
 			std::string idStr;
 			data.at("base_id").get_to(idStr);
-
-
 			baseID = std::stoi(idStr);
 
 			data.at("seed").get_to(archipelago::seed);
@@ -237,9 +234,19 @@ namespace archipelago
 				{
 					switch (mapping.type)
 					{
+						case DvarSetting::Type::StrArray:
+						{
+							size_t i = 0;
+							for (const auto& value : data[mapping.jsonName])
+							{
+								APSetDvar(mapping.dvarName + std::to_string(i), value.get<std::string>());
+								++i;
+							}
+							break;
+						}
 						case DvarSetting::Type::String:
 						{
-							std::string val;
+							std::string val = "";
 							data.at(mapping.jsonName).get_to(val);
 							APSetDvar(mapping.dvarName, val);
 							break;
@@ -265,16 +272,6 @@ namespace archipelago
 
 			APSetDvar("ARCHIPELAGO_SEED", archipelago::seed);
 			APSetDvar("ARCHIPELAGO_SETTINGS_READY", "TRUE");
-
-			for (auto& [jsonName, dVar] : settings)
-			{
-				if (data.contains(jsonName))
-				{
-					std::string val;
-					data.at(jsonName).get_to(val);
-					APSetDvar(dVar, val);
-				}
-			}
 
 			});
 		ap->set_slot_disconnected_handler([]() {
@@ -315,7 +312,7 @@ namespace archipelago
 				std::string sender = ap->get_player_alias(item.player);
 				std::string location = ap->get_location_name(item.location);
 
-				std::string luaThreadCode = "Archi.ItemGetEvent(\""+itemname+"\");";
+				std::string luaThreadCode = "Archi.ItemGetEvent(\""+itemname+"\", \"" + sender + "\", \"" + location + "\")";
 				hks::execute_raw_lua(luaThreadCode, "ItemGetThread");
 			}
 		});
@@ -385,6 +382,12 @@ namespace archipelago
 		return 1;
 	}
 
+	int goalReached(lua::lua_State* s)
+	{
+		ap->StatusUpdate(APClient::ClientStatus::GOAL);
+		return 1;
+	}
+
 	int disconnect(lua::lua_State* s)
 	{
 		disconnect_ap();
@@ -441,6 +444,7 @@ namespace archipelago
 				{"StoreSaveData",storeSaveData},
 				{"LoadSaveData",loadSaveData},
 				{"GetSeed",getSeed},
+				{"GoalReached",goalReached},
 				{nullptr, nullptr},
 			};
 			hks::hksI_openlib(game::UI_luaVM, "Archipelago", ArchipelagoLibrary, 0, 1);
