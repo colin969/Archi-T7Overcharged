@@ -470,7 +470,6 @@ namespace archipelago
 			if (file.is_open()) {
 				file << data;
 				file.close();
-				APDebugLogPrint("Saved slot data for seed: " + seed);
 			}
 		}
 		catch (const std::exception& e) {
