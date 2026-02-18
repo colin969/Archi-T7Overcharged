@@ -43,8 +43,12 @@ namespace archipelago
 
 	int lastItem = 0;
 
+	std::set<double> deathLinkTimestamps;
+
 	std::string slot = "";
 	std::string seed = "";
+	bool deathLinkEnabled = false;
+	double lastReceivedDeathlinkTime = 0.0;
 
 	struct DvarSetting {
 		std::string jsonName;
@@ -67,6 +71,11 @@ namespace archipelago
 		{"rolled_bows", "ARCHIPELAGO_ROLLED_BOW_", DvarSetting::Type::StrArray},
 		{"goal_items", "ARCHIPELAGO_GOAL_ITEM_", DvarSetting::Type::StrArray},
 		{"goal_items_required", "ARCHIPELAGO_GOAL_ITEMS_REQUIRED", DvarSetting::Type::Int},
+		{"attachments_randomized", "ARCHIPELAGO_ATTACHMENT_RANDO_ENABLED", DvarSetting::Type::Bool},
+		{"attachments_sight_weight", "ARCHIPELAGO_ATTACHMENT_RANDO_SIGHT_SIZE_WEIGHT", DvarSetting::Type::Int},
+		{"deathlink_enabled", "ARCHIPELAGO_DEATHLINK_ENABLED", DvarSetting::Type::Bool},
+		{"deathlink_send_mode", "ARCHIPELAGO_DEATHLINK_SEND_MODE", DvarSetting::Type::Int},
+		{"deathlink_recv_mode", "ARCHIPELAGO_DEATHLINK_RECV_MODE", DvarSetting::Type::Int},
 	};
 
 	std::list<int64_t> checkedLocationsList = { };
@@ -223,13 +232,20 @@ namespace archipelago
 			if (!data.contains("base_id") || !data.contains("seed") || !data.contains("slot")) {
 				//TODO Disconnect/End Game or something :/
 			}
-
+			
 			std::string idStr;
 			data.at("base_id").get_to(idStr);
 			baseID = std::stoi(idStr);
 
 			data.at("seed").get_to(archipelago::seed);
 			data.at("slot").get_to(archipelago::slot);
+
+			archipelago::deathLinkEnabled = data.contains("deathlink_enabled") ? data["deathlink_enabled"] == true : false;
+
+			if (archipelago::deathLinkEnabled)
+			{
+				ap->ConnectUpdate(false, items_handling, true, {"DeathLink"});
+			}
 
 			// Map slot setting data values to dvars
 			for (const auto& mapping : slot_settings)
@@ -330,9 +346,45 @@ namespace archipelago
 			APLogPrint(ap->render_json(msg, APClient::RenderFormat::TEXT).c_str());
 			});
 
-		ap->set_bounced_handler([](const json& cmd) {
-			//TODO Implement Deathlink
-			});
+		ap->set_bounced_handler([](const json& packet) {
+			std::list<std::string> tags = packet["tags"];
+
+			bool deathlink = (std::find(tags.begin(), tags.end(), "DeathLink") != tags.end());
+
+			if (deathlink) {
+				auto data = packet["data"];
+				std::string cause = "";
+				if (data.contains("cause")) {
+					cause = data["cause"];
+				}
+				std::string source = "";
+				if (data.contains("source")) {
+					source = data["source"];
+				}
+
+				double timestamp = data["time"];
+
+				// Max approximate values to ignore
+				double a = -1;
+
+				for (double b : archipelago::deathLinkTimestamps) {
+					if (fabs(timestamp - b) < std::numeric_limits<double>::epsilon() * fmax(fabs(timestamp), fabs(b))) { // double equality with some leeway because of conversion back and forth from/to JSON
+						a = b;
+					}
+				}
+
+				if (a != -1) {
+					archipelago::deathLinkTimestamps.erase(a);
+					return;
+				}
+
+				archipelago::lastReceivedDeathlinkTime = timestamp;
+
+				// Send deathlink recv
+				std::string luaThreadCode = "Archi.DeathlinkRecv(" + std::to_string(timestamp) + ")";
+				hks::execute_raw_lua(luaThreadCode, "DeathlinkRecvThread");
+			}
+		});
 
 	}
 
@@ -432,6 +484,31 @@ namespace archipelago
 		return 1;
 	}
 
+	int sendDeathlink(lua::lua_State* s)
+	{
+		if (archipelago::deathLinkEnabled) {
+			auto now = std::chrono::system_clock::now();
+			double nowDouble = (double)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() / 1000;
+
+			// Bit of leniance for networking stuff to prevent unintended deathlinks sending
+			if (nowDouble - archipelago::lastReceivedDeathlinkTime < 2.0) {
+				return 1;
+			}
+		
+			// Ignore own packet later
+			archipelago::deathLinkTimestamps.insert(nowDouble);
+		
+			auto data = nlohmann::json{
+				{"time", nowDouble},
+				{"cause", ""},
+				{"source", ap->get_player_alias(ap->get_player_number())}
+			};
+			ap->Bounce(data, {}, {}, {"DeathLink"});
+		}
+
+		return 1;
+	}
+
 	class component final : public component_interface
 	{
 	public:
@@ -449,6 +526,7 @@ namespace archipelago
 				{"LoadSaveData",loadSaveData},
 				{"GetSeed",getSeed},
 				{"GoalReached",goalReached},
+				{"SendDeathlink",sendDeathlink},
 				{nullptr, nullptr},
 			};
 			hks::hksI_openlib(game::UI_luaVM, "Archipelago", ArchipelagoLibrary, 0, 1);
