@@ -83,10 +83,6 @@
 #include <gsl/gsl>
 #include <MinHook.h>
 
-#include <rapidjson/document.h>
-#include <rapidjson/prettywriter.h>
-#include <rapidjson/stringbuffer.h>
-
 #include <asmjit/core/jitruntime.h>
 #include <asmjit/x86/x86assembler.h>
 

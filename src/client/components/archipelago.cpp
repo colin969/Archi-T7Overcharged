@@ -120,10 +120,7 @@ namespace archipelago
 
 		std::string uuid = ap_get_uuid(UUID_FILE);
 
-		if (temp_ap)
-		{	
-			delete temp_ap;
-		}
+		if (temp_ap) delete temp_ap;
 		temp_ap = nullptr;
 
 		std::string luaThreadCode = "UpdateConnectionStatus(\"Connecting...\")";
@@ -150,14 +147,9 @@ namespace archipelago
 			});
 
 		temp_ap->set_room_info_handler([slot, password]() {
-
-			std::list<std::string> tags;
-			tags.push_back("TextOnly");
-			temp_ap->ConnectSlot(slot, password, items_handling, tags, VERSION_TUPLE);
+			temp_ap->ConnectSlot(slot, password, items_handling, {"TextOnly"}, VERSION_TUPLE);
 			});
 		temp_ap->set_slot_connected_handler([](const json& data) {
-
-
 			//Mandatory values
 			if (!data.contains("base_id") || !data.contains("seed") || !data.contains("slot")) {
 
@@ -165,11 +157,7 @@ namespace archipelago
 
 			std::string luaThreadCode = "UpdateConnectionStatus(\"Validated\")";
 			hks::execute_raw_lua(luaThreadCode, "SetConnectionValidatedThread");
-
 		});
-			
-
-
 
 		temp_ap->set_slot_refused_handler([](const std::list<std::string>& errors) {
 				//On Error don't try and reconnect
@@ -183,7 +171,7 @@ namespace archipelago
 				hks::execute_raw_lua(luaThreadCode, "SetConnectionValidatedThread");
 				});
 
-		for (int i = 0; i < 5; i++)
+		for (int i = 0; i < 10; i++)
 		{
 			if (temp_ap){
 			
@@ -223,8 +211,7 @@ namespace archipelago
 			});
 
 		ap->set_room_info_handler([slot, password]() {
-				std::list<std::string> tags;
-				ap->ConnectSlot(slot, password, items_handling, tags, VERSION_TUPLE);
+				ap->ConnectSlot(slot, password, items_handling, {}, VERSION_TUPLE);
 			});
 		ap->set_slot_connected_handler([](const json& data) {
 
@@ -240,10 +227,9 @@ namespace archipelago
 			data.at("seed").get_to(archipelago::seed);
 			data.at("slot").get_to(archipelago::slot);
 
-			archipelago::deathLinkEnabled = data.contains("deathlink_enabled") ? data["deathlink_enabled"] == true : false;
+			archipelago::deathLinkEnabled = data.value("deathlink_enabled", false);
 
-			if (archipelago::deathLinkEnabled)
-			{
+			if (archipelago::deathLinkEnabled) {
 				ap->ConnectUpdate(false, items_handling, true, {"DeathLink"});
 			}
 
@@ -252,40 +238,35 @@ namespace archipelago
 			{
 				if (data.contains(mapping.jsonName))
 				{
-					switch (mapping.type)
-					{
-						case DvarSetting::Type::StrArray:
-						{
-							size_t i = 0;
-							for (const auto& value : data[mapping.jsonName])
-							{
-								APSetDvar(mapping.dvarName + std::to_string(i), value.get<std::string>());
-								++i;
+					try {
+						switch (mapping.type) {
+							case DvarSetting::Type::StrArray: {
+								size_t i = 0;
+								for (const auto& value : data.at(mapping.jsonName)) {
+									APSetDvar(mapping.dvarName + std::to_string(i), value.get<std::string>());
+									++i;
+								}
+								break;
 							}
-							break;
-						}
-						case DvarSetting::Type::String:
-						{
-							std::string val = "";
-							data.at(mapping.jsonName).get_to(val);
-							APSetDvar(mapping.dvarName, val);
-							break;
-						}
-						case DvarSetting::Type::Int:
-						{
-							APSetDvarInt(mapping.dvarName, (int) data[mapping.jsonName]);
-							break;
-						}
-						case DvarSetting::Type::Bool:
-						{
-							bool val = data[mapping.jsonName] == true;
-							if (val) {
-								APSetDvarInt(mapping.dvarName, 1);
-							} else {
-								APSetDvarInt(mapping.dvarName, 0);
+							case DvarSetting::Type::String: {
+								std::string val;
+								data.at(mapping.jsonName).get_to(val);
+								APSetDvar(mapping.dvarName, val);
+								break;
 							}
-							break;
+							case DvarSetting::Type::Int: {
+								APSetDvarInt(mapping.dvarName, data.at(mapping.jsonName).get<int>());
+								break;
+							}
+							case DvarSetting::Type::Bool: {
+								bool val = data.at(mapping.jsonName).get<bool>();
+								APSetDvarInt(mapping.dvarName, val ? 1 : 0);
+								break;
+							}
 						}
+					} catch (const json::exception& e) {
+						APLogPrint("Failed to decode slot data - " + mapping.jsonName);
+						continue;
 					}
 				}
 			}
@@ -347,45 +328,56 @@ namespace archipelago
 			});
 
 		ap->set_bounced_handler([](const json& packet) {
-			std::list<std::string> tags = packet["tags"];
-
-			bool deathlink = (std::find(tags.begin(), tags.end(), "DeathLink") != tags.end());
-
-			if (deathlink) {
-				auto data = packet["data"];
-				std::string cause = "";
-				if (data.contains("cause")) {
-					cause = data["cause"];
-				}
-				std::string source = "";
-				if (data.contains("source")) {
-					source = data["source"];
-				}
-
-				double timestamp = data["time"];
-
-				// Max approximate values to ignore
-				double a = -1;
-
-				for (double b : archipelago::deathLinkTimestamps) {
-					if (fabs(timestamp - b) < std::numeric_limits<double>::epsilon() * fmax(fabs(timestamp), fabs(b))) { // double equality with some leeway because of conversion back and forth from/to JSON
-						a = b;
-					}
-				}
-
-				if (a != -1) {
-					archipelago::deathLinkTimestamps.erase(a);
+			try {
+				if(!packet.contains("tags")) {
 					return;
 				}
 
-				archipelago::lastReceivedDeathlinkTime = timestamp;
+				std::list<std::string> tags = packet.at("tags").get<std::list<std::string>>();
+				bool deathlink = (std::find(tags.begin(), tags.end(), "DeathLink") != tags.end());
 
-				// Send deathlink recv
-				std::string luaThreadCode = "Archi.DeathlinkRecv(" + std::to_string(timestamp) + ")";
-				hks::execute_raw_lua(luaThreadCode, "DeathlinkRecvThread");
+				if (deathlink) {
+					auto data = packet.at("data");
+					std::string cause = data.value("cause", "");
+					std::string source = data.value("source", "");
+					double timestamp = data.at("time").get<double>();
+
+					// Max approximate values to ignore
+					double a = -1;
+
+					for (double b : archipelago::deathLinkTimestamps) {
+						if (fabs(timestamp - b) < std::numeric_limits<double>::epsilon() * fmax(fabs(timestamp), fabs(b))) { // double equality with some leeway because of conversion back and forth from/to JSON
+							a = b;
+						}
+					}
+
+					if (a != -1) {
+						archipelago::deathLinkTimestamps.erase(a);
+						return;
+					}
+
+					archipelago::lastReceivedDeathlinkTime = timestamp;
+
+					// Send deathlink recv
+					std::string luaThreadCode = "Archi.DeathlinkRecv(" + std::to_string(timestamp) + ")";
+					hks::execute_raw_lua(luaThreadCode, "DeathlinkRecvThread");
+				}
+			} catch (const json::exception& e) {
+				APLogPrint("Weird bounced packet received: " + std::string(e.what()));
+				return;
 			}
 		});
 
+		ap->set_location_info_handler([](const std::list<APClient::NetworkItem> valid_items) {
+			for (const auto& item : valid_items) {
+				std::string itemname = ap->get_item_name(item.item);
+				std::string sender = ap->get_player_alias(item.player);
+				std::string location = ap->get_location_name(item.location);
+
+				std::string luaThreadCode = "Archi.LocationScoutCb(\"" + itemname + "\",\"" + sender + "\",\"" + location + "\")";
+				hks::execute_raw_lua(luaThreadCode, "LocationScoutCbThread");
+			}
+		});
 	}
 
 	//Lua State Functions 
@@ -484,6 +476,14 @@ namespace archipelago
 		return 1;
 	}
 
+	int sendLocationScout(lua::lua_State* s)
+	{
+		lua::HksNumber loc = lua::lua_tonumber(s, 1);
+		int64_t loc_id = static_cast<int64_t>(loc);
+		ap->LocationScouts({ archipelago::baseID + loc_id });
+		return 1;
+	}
+
 	int sendDeathlink(lua::lua_State* s)
 	{
 		if (archipelago::deathLinkEnabled) {
@@ -527,6 +527,7 @@ namespace archipelago
 				{"GetSeed",getSeed},
 				{"GoalReached",goalReached},
 				{"SendDeathlink",sendDeathlink},
+				{"SendLocationScout",sendLocationScout},
 				{nullptr, nullptr},
 			};
 			hks::hksI_openlib(game::UI_luaVM, "Archipelago", ArchipelagoLibrary, 0, 1);
