@@ -57,18 +57,18 @@ namespace archipelago
 	};
 
 	struct DvarSetting slot_settings[] = {
-		{"map_specific_wallbuys", "ARCHIPELAGO_MAP_SPECIFIC_WALLBUYS", DvarSetting::Type::Bool},
 		{"map_specific_machines", "ARCHIPELAGO_MAP_SPECIFIC_MACHINES", DvarSetting::Type::Bool},
-		{"special_rounds_enabled", "ARCHIPELAGO_SPECIAL_ROUNDS_ENABLED", DvarSetting::Type::Bool},
 		{"perk_limit_default_modifier", "ARCHIPELAGO_PERK_LIMIT_DEFAULT_MODIFIER", DvarSetting::Type::Int},
 		{"randomized_shield_parts", "ARCHIPELAGO_RANDOMIZED_SHIELD_PARTS", DvarSetting::Type::Bool},
 		{"mystery_box_special_items", "ARCHIPELAGO_MYSTERY_BOX_SPECIAL", DvarSetting::Type::Bool},
 		{"mystery_box_regular_items", "ARCHIPELAGO_MYSTERY_BOX_REGULAR", DvarSetting::Type::Bool},
+		{"mystery_box_expanded", "ARCHIPELAGO_MYSTERY_BOX_EXPANDED", DvarSetting::Type::Bool},
 		{"difficulty_gorod_egg_cooldown", "ARCHIPELAGO_DIFFICULTY_GOROD_EGG_COOLDOWN", DvarSetting::Type::Bool},
 		{"difficulty_gorod_dragon_wings", "ARCHIPELAGO_DIFFICULTY_GOROD_DRAGON_WINGS", DvarSetting::Type::Bool},
 		{"difficulty_ee_checkpoints", "ARCHIPELAGO_DIFFICULTY_EE_CHECKPOINTS", DvarSetting::Type::Int},
 		{"difficulty_round_checkpoints", "ARCHIPELAGO_DIFFICULTY_ROUND_CHECKPOINTS", DvarSetting::Type::Int},
 		{"rolled_bows", "ARCHIPELAGO_ROLLED_BOW_", DvarSetting::Type::StrArray},
+		{"rolled_masks", "ARCHIPELAGO_ROLLED_MASK_", DvarSetting::Type::StrArray},
 		{"goal_items", "ARCHIPELAGO_GOAL_ITEM_", DvarSetting::Type::StrArray},
 		{"goal_items_required", "ARCHIPELAGO_GOAL_ITEMS_REQUIRED", DvarSetting::Type::Int},
 		{"attachments_randomized", "ARCHIPELAGO_ATTACHMENT_RANDO_ENABLED", DvarSetting::Type::Bool},
@@ -95,11 +95,13 @@ namespace archipelago
 	//Utility Functions
 	void APLogPrint(std::string message)
 	{
+		game::minlog.WriteLine(message.c_str());
 		std::string luaThreadCode = "Archi.LogMessage(\"" + message + "\");";
 		hks::execute_raw_lua(luaThreadCode, "APLogThread");
 	}
 	void APDebugLogPrint(std::string message)
 	{
+		game::minlog.WriteLine(message.c_str());
 		std::string luaThreadCode = "Archi.LogDebugMessage(\"" + message + "\");";
 		hks::execute_raw_lua(luaThreadCode, "APLogThread");
 	}
@@ -123,16 +125,12 @@ namespace archipelago
 		ap = nullptr;
 	}
 
-	void check_connection_ap(std::string uri = "", std::string slot = "", std::string uuidFile = ".\\mods\\bo3_archipelago\\zone\\uuid", std::string password = "")
+	void check_connection_ap(std::string uri = "", std::string slot = "", std::string password = "", std::string uuidFile = ".\\mods\\bo3_archipelago\\zone\\uuid")
 	{
-
 		std::string uuid = ap_get_uuid(UUID_FILE);
 
 		if (temp_ap) delete temp_ap;
 		temp_ap = nullptr;
-
-		std::string luaThreadCode = "UpdateConnectionStatus(\"Connecting...\")";
-		hks::execute_raw_lua(luaThreadCode, "SetConnectionValidatedThread");
 
 		temp_ap = new APClient(uuid, GAME_NAME, uri.empty() ? APClient::DEFAULT_URI : uri);
 
@@ -173,8 +171,9 @@ namespace archipelago
 				if (std::find(errors.begin(), errors.end(), "InvalidSlot") != errors.end()) {
 					luaThreadCode = "UpdateConnectionStatus(\"InvalidSlot\")";
 				}
-				else {
-					
+				if (std::find(errors.begin(), errors.end(), "InvalidPassword") != errors.end()) {
+					luaThreadCode = "UpdateConnectionStatus(\"InvalidPassword\")";
+
 				}
 				hks::execute_raw_lua(luaThreadCode, "SetConnectionValidatedThread");
 				});
@@ -195,7 +194,7 @@ namespace archipelago
 			
 	}
 
-	void connect_ap(std::string uri = "",std::string slot="",std::string uuidFile = ".\\mods\\bo3_archipelago\\zone\\uuid", std::string password = "")
+	void connect_ap(std::string uri = "", std::string slot = "", std::string password = "", std::string uuidFile = ".\\mods\\bo3_archipelago\\zone\\uuid")
 	{
 		std::string uuid = ap_get_uuid(UUID_FILE);
 
@@ -394,11 +393,10 @@ namespace archipelago
 	{
 		std::string url = lua::lua_tostring(s, 1);
 		std::string slot = lua::lua_tostring(s, 2);
-		std::string uuidPath = lua::lua_tostring(s, 3);
+		std::string password = lua::lua_tostring(s, 3);
+		std::string uuidPath = lua::lua_tostring(s, 4);
 
-		std::string password = "";
-
-		connect_ap(url, slot,uuidPath + UUID_FILE,password);
+		connect_ap(url, slot, password, uuidPath + UUID_FILE);
 
 		return 1;
 	}
@@ -408,12 +406,10 @@ namespace archipelago
 	{
 		std::string url = lua::lua_tostring(s, 1);
 		std::string slot = lua::lua_tostring(s, 2);
-		std::string uuidPath = lua::lua_tostring(s, 3);
+		std::string password = lua::lua_tostring(s, 3);
+		std::string uuidPath = lua::lua_tostring(s, 4);
 
-		//TODO: Support Password Argument
-		std::string password = "";
-
-		check_connection_ap(url, slot, uuidPath + UUID_FILE, password);
+		check_connection_ap(url, slot, password, uuidPath + UUID_FILE);
 
 		return 1;
 	}
