@@ -7,7 +7,6 @@
 #include "utils/io.hpp"
 #include "utils/hook.hpp"
 #include "utils/thread.hpp"
-#include "components/console.hpp"
 
 #include <string>
 #include <map>

@@ -18,7 +18,6 @@ extern "C"
 
 		if (!component_loader::post_start())
 		{
-			game::Com_Error_("", 0, 0x200u, "Error while loading ArchiT7OverchargedLibrary components");
 			game::minlog.WriteLine("Error while loading ArchiT7OverchargedLibrary components");
 			return 0;
 		}

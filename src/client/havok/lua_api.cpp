@@ -68,11 +68,6 @@ namespace lua
 		hks::hksI_openlib(s, libname, l, 0, 1);
 	}
 
-	void lua_setglobal(lua_State* s, const char* k)
-	{
-		lua_setfield(s, LUA_GLOBALSINDEX, k);
-	}
-
 	void lua_pop(lua_State* s, int n)
 	{
 		s->m_apistack.top -= n;
@@ -129,18 +124,6 @@ namespace lua
 		st = s->m_apistack.top;
 		*st = object;
 		s->m_apistack.top = st + 1;
-	}
-
-	void lua_pushfstring(lua_State* s, const char* fmt, ...)
-	{
-		va_list va;
-		va_start(va, fmt);
-		hks::hksi_lua_pushvfstring(s, fmt, &va);
-	}
-
-	void lua_pushvfstring(lua_State* s, const char* fmt, va_list* argp)
-	{
-		hks::hksi_lua_pushvfstring(s, fmt, argp);
 	}
 
 	void lua_getfield(lua_State* s, int index, const char*)

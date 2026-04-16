@@ -9,7 +9,6 @@
 
 #include <apclient.hpp>
 #include <apuuid.hpp>
-#include "console.hpp"
 #include "../game/game.hpp"
 
 //TMP
@@ -63,6 +62,8 @@ namespace archipelago
 		{"mystery_box_special_items", "ARCHIPELAGO_MYSTERY_BOX_SPECIAL", DvarSetting::Type::Bool},
 		{"mystery_box_regular_items", "ARCHIPELAGO_MYSTERY_BOX_REGULAR", DvarSetting::Type::Bool},
 		{"mystery_box_expanded", "ARCHIPELAGO_MYSTERY_BOX_EXPANDED", DvarSetting::Type::Bool},
+		{"difficulty_rng_moon_digger", "ARCHIPELAGO_DIFFICULTY_RNG_MOON_DIGGER", DvarSetting::Type::Bool},
+		{"difficulty_rng_moon_box", "ARCHIPELAGO_DIFFICULTY_RNG_MOON_BOX", DvarSetting::Type::Bool},
 		{"difficulty_gorod_egg_cooldown", "ARCHIPELAGO_DIFFICULTY_GOROD_EGG_COOLDOWN", DvarSetting::Type::Bool},
 		{"difficulty_gorod_dragon_wings", "ARCHIPELAGO_DIFFICULTY_GOROD_DRAGON_WINGS", DvarSetting::Type::Bool},
 		{"difficulty_ee_checkpoints", "ARCHIPELAGO_DIFFICULTY_EE_CHECKPOINTS", DvarSetting::Type::Int},
