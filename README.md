@@ -20,7 +20,7 @@ Current Target: AP 0.6.5
 2. Run `./generate.bat` to generate a solution inside `build`
 3. Run `vcpkg install --triplet=x64-windows-static` to set up openssl and zlib requirements
 4. Open solution in Visual Studio (do not upgrade build targets)
-5. Build the solution, enjoy your Archi-T7Overcharged.dll
+5. Build `-New` for Feb2026+ or `-Old` depending on the version of the game you want to use
 
 ## License 
 As with T7Overcharged, this is liscenced under GLP3 (linked above). 

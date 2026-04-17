@@ -77,6 +77,17 @@ newoption {
 	description = "Enable development builds of the client."
 }
 
+newoption {
+	trigger = "game-version",
+	description = "Target game version for offsets",
+	value = "VERSION",
+	allowed = {
+			{ "new", "Feb 2026+ game version" },
+			{ "old", "Old game version" }
+	},
+	default = "new"
+}
+
 newaction {
 	trigger = "version",
 	description = "Returns the version string for the current commit of the source code.",
@@ -225,7 +236,7 @@ location "./build"
 objdir "%{wks.location}/obj"
 targetdir "%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}"
 
-configurations {"Debug", "Release"}
+configurations {"Debug-New", "Release-New", "Debug-Old", "Release-Old"}
 
 language "C++"
 cppdialect "C++20"
@@ -252,6 +263,14 @@ flags {"NoIncrementalLink", "NoMinimalRebuild", "MultiProcessorCompile", "No64Bi
 
 filter "platforms:x64"
 	defines {"_WINDOWS", "WIN32"}
+filter {}
+
+filter "configurations:*New"
+    defines {"GAME_VERSION_FEB2026"}
+filter {}
+
+filter "configurations:*Old"
+    defines {"GAME_VERSION_OLD"}
 filter {}
 
 filter "configurations:Release"

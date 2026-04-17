@@ -6,9 +6,6 @@ namespace game
 {
 	extern uintptr_t base;
 	extern MinLog minlog;
-	extern std::unordered_map<game::dvarStrHash_t, std::string> dvarHashMap_s;
-
-	void LoadDvarHashMap();
 
 	template <typename T>
 	class symbol
@@ -38,4 +35,9 @@ namespace game
 		T* object_;
 	};
 }
-#include "symbols.hpp"
+
+#if defined(GAME_VERSION_FEB2026)
+	#include "symbols.hpp"
+#elif defined(GAME_VERSION_OLD)
+	#include "symbols_old.hpp"
+#endif
