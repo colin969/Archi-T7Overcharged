@@ -273,7 +273,7 @@ filter "configurations:*Old"
     defines {"GAME_VERSION_OLD"}
 filter {}
 
-filter "configurations:Release"
+filter "configurations:Release-*"
 	optimize "Size"
 	buildoptions {"/GL"}
 	linkoptions { "/IGNORE:4702", "/LTCG" }
@@ -281,7 +281,7 @@ filter "configurations:Release"
 	--flags {"FatalCompileWarnings"}
 filter {}
 
-filter "configurations:Debug"
+filter "configurations:Debug-*"
 	optimize "Debug"
 	defines {"DEBUG", "_DEBUG"}
 filter {}

@@ -36,8 +36,4 @@ namespace game
 	};
 }
 
-#if defined(GAME_VERSION_FEB2026)
-	#include "symbols.hpp"
-#elif defined(GAME_VERSION_OLD)
-	#include "symbols_old.hpp"
-#endif
+#include "symbols.hpp"

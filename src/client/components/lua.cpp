@@ -2,11 +2,7 @@
 #include "loader/component_loader.hpp"
 
 #include "game/dvars.hpp"
-#if defined(GAME_VERSION_FEB2026)
-	#include "havok/hks_api.hpp"
-#elif defined(GAME_VERSION_OLD)
-	#include "havok/hks_api_old.hpp"
-#endif
+#include "havok/hks_api.hpp"
 #include "havok/lua_api.hpp"
 
 namespace lua

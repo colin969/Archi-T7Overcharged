@@ -1,10 +1,6 @@
 #include <std_include.hpp>
 #include "loader/component_loader.hpp"
-#if defined(GAME_VERSION_FEB2026)
-	#include "havok/hks_api.hpp"
-#elif defined(GAME_VERSION_OLD)
-	#include "havok/hks_api_old.hpp"
-#endif
+#include "havok/hks_api.hpp"
 #include "havok/lua_api.hpp"
 
 #define UUID_FILE "uuid"
@@ -226,11 +222,14 @@ namespace archipelago
 				ap->ConnectSlot(slot, password, items_handling, {}, VERSION_TUPLE);
 			});
 		ap->set_slot_connected_handler([](const json& data) {
-
 			//Mandatory values
 			if (!data.contains("base_id") || !data.contains("seed") || !data.contains("slot")) {
 				//TODO Disconnect/End Game or something :/
 			}
+
+			// Check location ids if we don't have them already
+			ap->get_missing_locations();
+			ap->get_checked_locations();
 			
 			std::string idStr;
 			data.at("base_id").get_to(idStr);
@@ -285,7 +284,8 @@ namespace archipelago
 
 			APSetDvar("ARCHIPELAGO_SEED", archipelago::seed);
 			APSetDvar("ARCHIPELAGO_SETTINGS_READY", "TRUE");
-
+			std::string luaThreadCode = "Archi.SlotConnected();";
+			hks::execute_raw_lua(luaThreadCode, "SlotConnectedThread");
 			});
 		ap->set_slot_disconnected_handler([]() {
 			APLogPrint("Slot Disconnected");
@@ -419,6 +419,40 @@ namespace archipelago
 		return 1;
 	}
 
+	int getMissingLocations(lua::lua_State* s)
+	{
+		if (!ap) return 0;
+
+		auto missing = ap->get_missing_locations();
+		std::string result = "{";
+		for (const auto& loc : missing) {
+			result += std::to_string(loc - baseID) + ",";
+		}
+		if (!missing.empty()) result.pop_back();
+		result += "}";
+
+		std::string luaThreadCode = "Archi.ReceiveMissingLocations(" + result + ")";
+		hks::execute_raw_lua(luaThreadCode, "GetLocsThread");
+		return 0;
+	}
+
+	int getCheckedLocations(lua::lua_State* s)
+	{
+		if (!ap) return 0;
+
+		auto checked = ap->get_checked_locations();
+		std::string result = "{";
+		for (const auto& loc : checked) {
+			result += std::to_string(loc - baseID) + ",";
+		}
+		if (!checked.empty()) result.pop_back();
+		result += "}";
+
+		std::string luaThreadCode = "Archi.ReceiveCheckedLocations(" + result + ")";
+		hks::execute_raw_lua(luaThreadCode, "GetLocsThread");
+		return 0;
+	}
+
 	int storeSaveData(lua::lua_State* s)
 	{
 		std::string data = lua::lua_tostring(s, 1);
@@ -527,6 +561,8 @@ namespace archipelago
 			{
 				{"Connect", connect},
 				{"CheckConnection",checkConnection},
+				{"GetCheckedLocations",getCheckedLocations},
+				{"GetMissingLocations",getMissingLocations},
 				{"Disconnect",disconnect},
 				{"Poll",poll},
 				{"CheckLocation",checkLocation},
