@@ -59,6 +59,7 @@ namespace archipelago
 		{"map_specific_machines", "ARCHIPELAGO_MAP_SPECIFIC_MACHINES", DvarSetting::Type::Bool},
 		{"perk_limit_default_modifier", "ARCHIPELAGO_PERK_LIMIT_DEFAULT_MODIFIER", DvarSetting::Type::Int},
 		{"randomized_shield_parts", "ARCHIPELAGO_RANDOMIZED_SHIELD_PARTS", DvarSetting::Type::Bool},
+		{"super_ee_reward", "ARCHIPELAGO_SUPER_EE_REWARD", DvarSetting::Type::Bool},
 		{"mystery_box_special_items", "ARCHIPELAGO_MYSTERY_BOX_SPECIAL", DvarSetting::Type::Bool},
 		{"mystery_box_regular_items", "ARCHIPELAGO_MYSTERY_BOX_REGULAR", DvarSetting::Type::Bool},
 		{"mystery_box_expanded", "ARCHIPELAGO_MYSTERY_BOX_EXPANDED", DvarSetting::Type::Bool},
