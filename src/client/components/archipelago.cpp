@@ -162,7 +162,7 @@ namespace archipelago
 
 			}
 
-			std::string luaThreadCode = "UpdateConnectionStatus(\"Validated\")";
+			std::string luaThreadCode = "SetApConnected()";
 			hks::execute_raw_lua(luaThreadCode, "SetConnectionValidatedThread");
 		});
 
