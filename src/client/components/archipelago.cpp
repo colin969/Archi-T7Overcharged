@@ -107,6 +107,12 @@ namespace archipelago
 		std::string luaThreadCode = "Archi.LogDebugMessage(\"" + message + "\");";
 		hks::execute_raw_lua(luaThreadCode, "APLogThread");
 	}
+	void APLogPrintBold(std::string message)
+	{
+		game::minlog.WriteLine(message.c_str());
+		std::string luaThreadCode = "Archi.LogBoldMessage(\"" + message + "\");";
+		hks::execute_raw_lua(luaThreadCode, "APLogThread");
+	}
 
 	void APSetDvar(std::string var, std::string val)
 	{
@@ -289,14 +295,14 @@ namespace archipelago
 			hks::execute_raw_lua(luaThreadCode, "SlotConnectedThread");
 			});
 		ap->set_slot_disconnected_handler([]() {
-			APLogPrint("Slot Disconnected");
+			APLogPrintBold("Slot Disconnected");
 			});
 		ap->set_slot_refused_handler([](const std::list<std::string>& errors) {
 			if (std::find(errors.begin(), errors.end(), "InvalidSlot") != errors.end()) {
-				//APLogPrint("Slot Invalid");
+				APLogPrintBold("Slot Invalid");
 			}
 			else {
-				APLogPrint("Connection refused:");
+				APLogPrintBold("Connection refused:");
 				for (const auto& error : errors) APLogPrint(error.c_str());
 			}
 			});
