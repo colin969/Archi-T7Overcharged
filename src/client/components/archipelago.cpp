@@ -126,6 +126,17 @@ namespace archipelago
 		hks::execute_raw_lua(luaThreadCode, "APSetDvarThread");
 	}
 
+	static std::string EscapeLua(std::string s)
+	{
+		std::string result;
+		for (char c : s) {
+			if (c == '"') result += "\\\"";
+			else if (c == '\\') result += "\\\\";
+			else result += c;
+		}
+		return result;
+	};
+
 	//Actual C++ functions
 	void disconnect_ap()
 	{
@@ -162,15 +173,32 @@ namespace archipelago
 
 		temp_ap->set_room_info_handler([slot, password]() {
 			temp_ap->ConnectSlot(slot, password, items_handling, {"TextOnly"}, VERSION_TUPLE);
-			});
+		});
+
 		temp_ap->set_slot_connected_handler([](const json& data) {
-			//Mandatory values
 			if (!data.contains("base_id") || !data.contains("seed") || !data.contains("slot")) {
 
 			}
-
-			std::string luaThreadCode = "UpdateConnectionStatus(\"Validated\")";
-			hks::execute_raw_lua(luaThreadCode, "SetConnectionValidatedThread");
+	
+			std::string statusCall;
+	
+			if (data.contains("starting_maps") && data.at("starting_maps").is_array()) {
+				// Build a Lua table string: {"Map A","Map B",...}
+				std::string mapsLua = "{";
+				bool first = true;
+				for (const auto& map : data.at("starting_maps")) {
+						if (!first) mapsLua += ",";
+						mapsLua += "\"" + EscapeLua(map.get<std::string>()) + "\"";
+						first = false;
+				}
+				mapsLua += "}";
+	
+				statusCall = "UpdateConnectionStatus(\"Validated\", " + mapsLua + ")";
+			} else {
+				statusCall = "UpdateConnectionStatus(\"Validated\", {})";
+			}
+	
+			hks::execute_raw_lua(statusCall, "SetConnectionValidatedThread");
 		});
 
 		temp_ap->set_slot_refused_handler([](const std::list<std::string>& errors) {
@@ -327,10 +355,10 @@ namespace archipelago
 			for (const auto& item : valid_items) {
 				archipelago::lastItem += 1;
 
-				std::string itemname = ap->get_item_name(item.item);
+				std::string itemname = EscapeLua(ap->get_item_name(item.item));
 
-				std::string sender = ap->get_player_alias(item.player);
-				std::string location = ap->get_location_name(item.location);
+				std::string sender = EscapeLua(ap->get_player_alias(item.player));
+				std::string location = EscapeLua(ap->get_location_name(item.location));
 
 				std::string luaThreadCode = "Archi.ItemGetEvent(\""+itemname+"\", \"" + sender + "\", \"" + location + "\")";
 				hks::execute_raw_lua(luaThreadCode, "ItemGetThread");
@@ -389,9 +417,9 @@ namespace archipelago
 
 		ap->set_location_info_handler([](const std::list<APClient::NetworkItem> valid_items) {
 			for (const auto& item : valid_items) {
-				std::string itemname = ap->get_item_name(item.item);
-				std::string sender = ap->get_player_alias(item.player);
-				std::string location = ap->get_location_name(item.location);
+				std::string itemname = EscapeLua(ap->get_item_name(item.item));
+				std::string sender = EscapeLua(ap->get_player_alias(item.player));
+				std::string location = EscapeLua(ap->get_location_name(item.location));
 
 				std::string luaThreadCode = "Archi.LocationScoutCb(\"" + itemname + "\",\"" + sender + "\",\"" + location + "\")";
 				hks::execute_raw_lua(luaThreadCode, "LocationScoutCbThread");
